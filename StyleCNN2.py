@@ -5,12 +5,17 @@ from modules.GramMatrix import *
 
 
 class StyleCNN2(object):
-    def __init__(self, style, content, pastiche):
+    # def __init__(self, style, content, pastiche):
+    def __init__(self, style):
         super(StyleCNN2, self).__init__()
 
         self.style = style
-        self.content = content
-        self.pastiche = nn.Parameter(pastiche.data)
+        # self.content = content
+        # self.pastiche = nn.Parameter(pastiche.data)
+
+
+        self.content = None
+        self.pastiche = None
 
         self.content_layers = ['conv_4']
         self.style_layers = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
