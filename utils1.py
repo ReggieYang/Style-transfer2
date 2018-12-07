@@ -10,11 +10,12 @@ import itertools
 imsize = 256
 
 loader = transforms.Compose([
-             transforms.Resize([imsize, imsize]),
-             transforms.ToTensor()
-         ])
+    transforms.Resize([imsize, imsize]),
+    transforms.ToTensor()
+])
 
 unloader = transforms.ToPILImage()
+
 
 def image_loader(image_name):
     image = Image.open(image_name)
@@ -22,11 +23,13 @@ def image_loader(image_name):
     image_tensor.unsqueeze_(0)
     image_variable = Variable(image_tensor)
     return image_variable
-  
+
+
 def save_image(image, path):
     image = image.view(3, imsize, imsize)
     image = unloader(image)
     scipy.misc.imsave(path, image)
+
 
 def save_images(input, paths):
     N = input.size()[0]
@@ -34,10 +37,10 @@ def save_images(input, paths):
     for i in range(N):
         save_image(images[i], paths[i])
 
+
 def get_content_and_style(loader1, loader2, num_iters):
     iter1 = itertools.cycle(loader1)
     iter2 = itertools.cycle(loader2)
 
     for _ in range(num_iters):
         yield (next(iter1), next(iter2))
-        

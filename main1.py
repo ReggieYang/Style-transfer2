@@ -14,12 +14,14 @@ N = 4
 
 content = None
 style = None
+
+
 def main():
     style_cnn = StyleCNN()
 
     coco = datasets.ImageFolder(root='data/contents/', transform=loader)
     content_loader = torch.utils.data.DataLoader(coco, batch_size=N, shuffle=True, **kwargs)
-    
+
     # Styles
     paintings = datasets.ImageFolder(root='data/styles/', transform=loader)
     style_loader = torch.utils.data.DataLoader(paintings, batch_size=1, shuffle=False, **kwargs)
@@ -52,5 +54,6 @@ def main():
 
         if i == num_iters:
             break
+
 
 main()

@@ -7,34 +7,36 @@ from modules.Flatten import *
 from modules.GramMatrix import *
 from modules.ScaledTanh import *
 from modules.LearnedInstanceNorm2d import *
+
+
 class StyleCNN(object):
     def __init__(self):
         super(StyleCNN, self).__init__()
-        
+
         self.content_layers = ['conv_4']
         self.style_layers = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
         self.content_weight = 5
         self.style_weight = 1000
         self.use_cuda = torch.cuda.is_available()
         self.transform_network = nn.Sequential(nn.ReflectionPad1d(40),
-                                                nn.Conv2d(3, 32, 9, stride=1, padding=4),
-                                                nn.Conv2d(32, 64, 3, stride=2, padding=1),
-                                                nn.Conv2d(64, 128, 3, stride=2, padding=1),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.Conv2d(128, 128, 3, stride=1, padding=0),
-                                                nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1),
-                                                nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),
-                                                nn.Conv2d(32, 3, 9, stride=1, padding=4),
-                                            )
-        
+                                               nn.Conv2d(3, 32, 9, stride=1, padding=4),
+                                               nn.Conv2d(32, 64, 3, stride=2, padding=1),
+                                               nn.Conv2d(64, 128, 3, stride=2, padding=1),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.Conv2d(128, 128, 3, stride=1, padding=0),
+                                               nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1),
+                                               nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),
+                                               nn.Conv2d(32, 3, 9, stride=1, padding=4),
+                                               )
+
         self.gram = GramMatrix()
         self.loss = nn.MSELoss()
         final_linear = nn.Linear(256, 32)
@@ -48,7 +50,7 @@ class StyleCNN(object):
                                                    nn.Linear(625, 256),
                                                    final_linear
                                                    )
-        
+
         self.out_dims = [32, 64, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 64, 32, 3]
 
         self.loss_network = models.vgg19(pretrained=True)
@@ -85,7 +87,6 @@ class StyleCNN(object):
             self.loss.cuda()
             self.gram.cuda()
 
-    
     def train(self, content, style):
 
         self.transform_optimizer.zero_grad()
@@ -100,32 +101,32 @@ class StyleCNN(object):
             if idx != 0:
                 out_dim = self.out_dims[idx - 1]
                 weight = norm_params[:out_dim, idx - 1].data
-                bias = norm_params[:out_dim, idx + int(N/2) - 1].data
+                bias = norm_params[:out_dim, idx + int(N / 2) - 1].data
                 instance_norm = LearnedInstanceNorm2d(out_dim, Parameter(weight), Parameter(bias))
 
                 layers = nn.Sequential(*[layer, instance_norm, nn.ReLU()])
             else:
                 layers = nn.Sequential(layer)
-            
+
             if self.use_cuda:
                 layers.cuda()
 
             pastiche = layers(pastiche)
             idx += 1
-        
+
         pastiche.data.clamp_(0, 255)
         pastiche_saved = pastiche.clone()
-        
+
         content_loss = 0
         style_loss = 0
 
         start_layer = 0
         style = style.expand_as(content)
-        
+
         i = 1
         not_inplace = lambda layer: nn.ReLU(inplace=False) if isinstance(layer, nn.ReLU) else layer
         for layer, losses in self.loss_layers:
-            layers = list(self.loss_network.features.children())[start_layer:layer+1]
+            layers = list(self.loss_network.features.children())[start_layer:layer + 1]
             layers = [not_inplace(item) for item in layers]
 
             features = nn.Sequential(*layers)
@@ -141,16 +142,15 @@ class StyleCNN(object):
                 style_loss += self.loss(pastiche_g * self.style_weight, style_g.detach() * self.style_weight)
 
             start_layer = layer + 1
-        
+
         total_loss = content_loss + style_loss
         total_loss.backward()
 
         self.transform_optimizer.step()
         self.normalization_optimizer.step()
-        
+
         return content_loss, style_loss, pastiche_saved
-    
+
     def save(self):
         torch.save(self.normalization_network.state_dict(), "models/normalization_net_ckpt")
         torch.save(self.transform_network.state_dict(), "models/transform_net_ckpt")
-    

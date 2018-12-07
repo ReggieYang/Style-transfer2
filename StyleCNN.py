@@ -7,6 +7,7 @@ from modules.GramMatrix import *
 from modules.ScaledTanh import *
 from modules.LearnedInstanceNorm2d import *
 
+
 class StyleCNN(object):
     def __init__(self):
         super(StyleCNN, self).__init__()
@@ -100,13 +101,13 @@ class StyleCNN(object):
             if idx != 0:
                 out_dim = self.out_dims[idx - 1]
                 weight = norm_params[:out_dim, idx - 1].data
-                bias = norm_params[:out_dim, idx + int(N/2) - 1].data
+                bias = norm_params[:out_dim, idx + int(N / 2) - 1].data
                 instance_norm = LearnedInstanceNorm2d(out_dim, Parameter(weight), Parameter(bias))
 
                 layers = nn.Sequential(*[layer, instance_norm, nn.ReLU()])
             else:
                 layers = nn.Sequential(layer)
-            
+
             if self.use_cuda:
                 layers.cuda()
 
@@ -115,7 +116,7 @@ class StyleCNN(object):
 
         pastiche.data.clamp_(0, 255)
         pastiche_saved = pastiche.clone()
-        
+
         content_loss = 0
         style_loss = 0
 
@@ -123,7 +124,7 @@ class StyleCNN(object):
         style = style.expand_as(content)
         not_inplace = lambda item: nn.ReLU(inplace=False) if isinstance(item, nn.ReLU) else item
         for layer, losses in self.loss_layers:
-            layers = list(self.loss_network.features.children())[start_layer:layer+1]
+            layers = list(self.loss_network.features.children())[start_layer:layer + 1]
             layers = [not_inplace(item) for item in layers]
 
             features = nn.Sequential(*layers)
@@ -157,13 +158,13 @@ class StyleCNN(object):
             if idx != 0:
                 out_dim = self.out_dims[idx - 1]
                 weight = norm_params[:out_dim, idx - 1].data
-                bias = norm_params[:out_dim, idx + int(N/2) - 1].data
+                bias = norm_params[:out_dim, idx + int(N / 2) - 1].data
                 instance_norm = LearnedInstanceNorm2d(out_dim, Parameter(weight), Parameter(bias))
 
                 layers = nn.Sequential(*[layer, instance_norm, nn.ReLU()])
             else:
                 layers = nn.Sequential(layer)
-            
+
             if self.use_cuda:
                 layers.cuda()
 
@@ -172,7 +173,6 @@ class StyleCNN(object):
 
         content.data.clamp_(0, 255)
         return content
-
 
     def save(self):
         torch.save(self.normalization_network.state_dict(), "models/normalization_net_ckpt")
